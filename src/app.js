@@ -1,13 +1,10 @@
 import express from "express";
 import cors from "cors";
+import userRoute from "./routes/user.route.js";
 let app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static("public"));
-app.use(express.urlencoded());
-app.get("/:id", (req, res) => {
-  let id = req.params.id;
-  let name = req.query["name"];
-  res.send(`hi mongo is connected and your id is ${id} and name is ${name}`);
-});
+app.use(express.urlencoded()); //this is used to decode the url data as data in url like params are somewhat encoded
+app.use("/api/v1/users", userRoute);
 export { app };
