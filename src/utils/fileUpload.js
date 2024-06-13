@@ -10,11 +10,11 @@ cloudinary.config({
 let updloadFileToCloud = async (filepath) => {
   try {
     if (!filepath) return null;
-    let response = await cloudinary.uploader.upload(
-      "https://upload.wikimedia.org/wikipedia/commons/a/ae/Olympic_flag.jpg",
-      { resource_type: "auto" }
-    );
+    let response = await cloudinary.uploader.upload(filepath, {
+      resource_type: "auto",
+    });
     console.log("file was uploaded succesfully", response.url);
+    fs.unlinkSync(filepath);
     return response;
   } catch (e) {
     console.log("file upload on aws error", e);
