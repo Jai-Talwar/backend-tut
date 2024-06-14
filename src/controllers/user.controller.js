@@ -1,6 +1,7 @@
 import apiError from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { updloadFileToCloud } from "../utils/fileUpload.js";
+import jwt from "jsonwebtoken";
 const generateAccessTokenAndRefreshToken = async (userId) => {
   try {
     let user = await User.findById(userId);
@@ -130,4 +131,50 @@ const logoutUser = async (req, res) => {
     throw new apiError(500, error?.message || "some error occured in logout");
   }
 };
-export { registerUser, loginUser, logoutUser };
+const refreshAccessToken = async (req, res) => {
+  let incomingResfreshToken = req.cookies.refreshToken || req.body.refreshToken;
+  if (!incomingResfreshToken) {
+    throw new apiError(401, "Unauthorised request");
+  }
+  try {
+    const decodedtoken = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    const user = await User.findById(decodedtoken?._id);
+    if (!user) {
+      throw new apiError(401, "invalid token");
+    }
+    if (incomingResfreshToken != user?.refreshToken) {
+      throw new apiError(401, "refresh token expired");
+    }
+    let { accessToken, newrefreshToken } =
+      await generateAccessTokenAndRefreshToken(decodedtoken?.id);
+    let options = {
+      httpOnly: true,
+      secure: true,
+    };
+    res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newrefreshToken, options)
+      .send({ refreshToken: newrefreshToken, accessToken });
+  } catch (e) {
+    res.status(401).send(e ? e : "invalid refresh token");
+  }
+};
+const changePassword = async (req, res) => {
+  try {
+    let { oldPassword, newPassword } = req.body;
+    let user = await User.findById(req.user._id);
+    let isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordCorrect) {
+      throw new apiError(400, "invalid old password");
+    }
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+    res.status(200).send({
+      message: "password changed succesfully",
+    });
+  } catch (error) {
+    throw new apiError(); //TODO
+  }
+};
+export { registerUser, loginUser, logoutUser, refreshAccessToken };
